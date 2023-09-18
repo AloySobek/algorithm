@@ -62,9 +62,9 @@ void quicksort(int *arr, int start, int end) {
 }
 
 int main(int argc, char **argv) {
-    int arr[64];
+    int arr[1024];
 
-    if (argc > 64) {
+    if (argc > 1024) {
         printf("Too much numbers!\n");
 
         return -1;
@@ -78,6 +78,16 @@ int main(int argc, char **argv) {
 
     for (int i = 1; i < argc; ++i) {
         arr[i - 1] = atoi(argv[i]);
+    }
+
+    int *array = (int *)malloc(sizeof(int) * 1024);
+
+    for (int i = 0; i < 1000; ++i) {
+        for (int j = 1; j < argc - 1; ++j) {
+            array[j - 1] = arr[i];
+        }
+
+        quicksort(array, 0, argc - 2);
     }
 
     quicksort(arr, 0, argc - 2);
