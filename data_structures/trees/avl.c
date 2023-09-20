@@ -110,3 +110,27 @@ struct node *get_from_avl_tree(struct node *node, int data) {
         return get_from_avl_tree(node->right, data);
     }
 }
+
+void print_tree(struct node *node, int height) {
+    if (node == NULL) {
+        return;
+    }
+
+    print_tree(node->right, height + 1);
+
+    printf("% *d\n", 3 * height, node->data);
+
+    print_tree(node->left, height + 1);
+}
+
+int main() {
+    struct node *root = insert_into_avl_tree(NULL, 0);
+
+    for (int i = 0; i < 100; ++i) {
+        root = insert_into_avl_tree(root, i);
+    }
+
+    print_tree(root, 0);
+
+    return (0);
+}
