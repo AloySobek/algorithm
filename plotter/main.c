@@ -2,9 +2,20 @@
 #include <stdlib.h>
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
+
+enum image_index {
+    PRESS,
+    RIGHT,
+    LEFT,
+    UP,
+    DOWN,
+
+    MAX
+};
 
 typedef struct {
     SDL_Window *window;
@@ -36,6 +47,16 @@ App *init_app() {
         return NULL;
     }
 
+    int img_flags = IMG_INIT_PNG;
+
+    if ((IMG_Init(img_flags) & img_flags) != img_flags) {
+        printf("SDL_image could not be initialized! SDL_image Error: %s\n", IMG_GetError());
+
+        SDL_DestroyWindow(app->window);
+
+        return NULL;
+    }
+
     app->surface = SDL_GetWindowSurface(app->window);
 
     // SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
@@ -51,34 +72,27 @@ App *init_app() {
     return app;
 }
 
-enum image_index {
-    PRESS,
-    RIGHT,
-    LEFT,
-    UP,
-    DOWN,
+SDL_Surface *load_and_optimize_image(App *app, const char *file) {
+    SDL_Surface *surface = IMG_Load(file);
+    SDL_Surface *optimized = NULL;
 
-    MAX
-};
+    if (surface == NULL) {
+        printf("Unalbe to load image %s! SDL Error: %s\n", file, SDL_GetError());
 
-SDL_Surface **load_image(App *app) {
-    SDL_Surface **images = (SDL_Surface **)malloc(sizeof(SDL_Surface *) * MAX);
-
-    char *names[MAX] = {"press.bmp", "right.bmp", "left.bmp", "up.bmp", "down.bmp"};
-
-    for (int i = 0; i < MAX; ++i) {
-        *(images + i) = SDL_LoadBMP(names[i]);
-
-        if (*(images + i) == NULL) {
-            printf("Unable to load image %s! SDL Error: %s\n", names[i], SDL_GetError());
-
-            free(images);
-
-            return NULL;
-        }
+        return NULL;
     }
 
-    return images;
+    optimized = SDL_ConvertSurface(surface, app->surface->format, 0);
+
+    if (optimized == NULL) {
+        printf("Unable to optimize image %s! SDL ERror: %s\n", file, SDL_GetError());
+
+        SDL_FreeSurface(surface);
+
+        return NULL;
+    }
+
+    return optimized;
 }
 
 void destroy_app(App *app) {
@@ -98,9 +112,9 @@ int main() {
         return -1;
     }
 
-    SDL_Surface **images = load_image(app);
+    SDL_Surface *image = load_and_optimize_image(app, "loaded.png");
 
-    if (images == NULL) {
+    if (image == NULL) {
         return -1;
     }
 
@@ -108,50 +122,27 @@ int main() {
 
     int quit = 0;
 
-    SDL_Surface *current_surface = images[PRESS];
-
     while (!quit) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 quit = 1;
-            } else if (e.type == SDL_KEYDOWN) {
-                switch (e.key.keysym.sym) {
-                case SDLK_RIGHT: {
-                    current_surface = images[RIGHT];
-                    break;
-                }
-                case SDLK_LEFT: {
-                    current_surface = images[LEFT];
-                    break;
-                }
-                case SDLK_UP: {
-                    current_surface = images[UP];
-                    break;
-                }
-                case SDLK_DOWN: {
-                    current_surface = images[DOWN];
-                    break;
-                }
-                default: {
-                    current_surface = images[PRESS];
-                    break;
-                }
-                }
-            } else if (e.type == SDL_KEYUP) {
-                current_surface = images[PRESS];
             }
         }
 
-        SDL_BlitSurface(current_surface, NULL, app->surface, NULL);
+        SDL_Rect rect;
+
+        rect.x = 0;
+        rect.y = 0;
+
+        rect.w = SCREEN_WIDTH;
+        rect.h = SCREEN_HEIGHT;
+
+        SDL_BlitScaled(image, NULL, app->surface, &rect);
 
         SDL_UpdateWindowSurface(app->window);
     }
 
-    for (int i = 0; i < MAX; ++i) {
-        SDL_FreeSurface(*(images + i));
-    }
-
-    free(images);
+    SDL_FreeSurface(image);
 
     destroy_app(app);
 
