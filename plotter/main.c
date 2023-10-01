@@ -3,9 +3,10 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
 
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
+#define WINDOW_WIDTH 1280
+#define WINDOW_HEIGHT 720
 
 enum image_index {
     PRESS,
@@ -19,8 +20,7 @@ enum image_index {
 
 typedef struct {
     SDL_Window *window;
-    // SDL_Renderer *renderer;
-    SDL_Surface *surface;
+    SDL_Renderer *renderer;
 } App;
 
 App *init_app() {
@@ -32,6 +32,12 @@ App *init_app() {
 
     window_flags = 0;
 
+    if (TTF_Init() < 0) {
+        printf("Couldn't initialize TTF: %s\n", TTF_GetError());
+
+        return NULL;
+    }
+
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("Couldn't initialize SDL: %s\n", SDL_GetError());
 
@@ -39,71 +45,177 @@ App *init_app() {
     }
 
     app->window = SDL_CreateWindow("Plotter", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                                   SCREEN_WIDTH, SCREEN_HEIGHT, window_flags);
+                                   WINDOW_WIDTH, WINDOW_HEIGHT, window_flags);
 
     if (!app->window) {
-        printf("Failed to open %d x %d window: %s\n", SCREEN_WIDTH, SCREEN_HEIGHT, SDL_GetError());
+        printf("Failed to open %d x %d window: %s\n", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_GetError());
 
         return NULL;
     }
 
-    int img_flags = IMG_INIT_PNG;
+    app->renderer = SDL_CreateRenderer(app->window, -1, SDL_RENDERER_ACCELERATED);
 
-    if ((IMG_Init(img_flags) & img_flags) != img_flags) {
-        printf("SDL_image could not be initialized! SDL_image Error: %s\n", IMG_GetError());
+    if (!app->renderer) {
+        printf("Failed to create renderer: %s\n", SDL_GetError());
 
         SDL_DestroyWindow(app->window);
 
         return NULL;
     }
 
-    app->surface = SDL_GetWindowSurface(app->window);
+    SDL_SetRenderDrawColor(app->renderer, 0xFF, 0xFF, 0xFF, 0xFF);
 
-    // SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+    int img_flags = IMG_INIT_PNG;
 
-    // app->renderer = SDL_CreateRenderer(app->window, -1, renderer_flags);
+    if ((IMG_Init(img_flags) & img_flags) != img_flags) {
+        printf("SDL_image could not be initialized! SDL_image Error: %s\n", IMG_GetError());
 
-    // if (!app->renderer) {
-    //     printf("Failed to create renderer: %s\n", SDL_GetError());
+        SDL_DestroyRenderer(app->renderer);
+        SDL_DestroyWindow(app->window);
 
-    //     return NULL;
-    // }
+        return NULL;
+    }
 
     return app;
 }
 
-SDL_Surface *load_and_optimize_image(App *app, const char *file) {
-    SDL_Surface *surface = IMG_Load(file);
-    SDL_Surface *optimized = NULL;
+SDL_Texture *load_texture(App *app, const char *file) {
+    SDL_Texture *texture = NULL;
 
-    if (surface == NULL) {
-        printf("Unalbe to load image %s! SDL Error: %s\n", file, SDL_GetError());
+    texture = IMG_LoadTexture(app->renderer, file);
 
-        return NULL;
-    }
-
-    optimized = SDL_ConvertSurface(surface, app->surface->format, 0);
-
-    if (optimized == NULL) {
-        printf("Unable to optimize image %s! SDL ERror: %s\n", file, SDL_GetError());
-
-        SDL_FreeSurface(surface);
+    if (texture == NULL) {
+        printf("Unable to create texture from %s! SDL Error: %s\n", file, SDL_GetError());
 
         return NULL;
     }
 
-    return optimized;
+    return texture;
 }
 
+// SDL_Surface *load_and_optimize_image(App *app, const char *file) {
+//     SDL_Surface *surface = IMG_Load(file);
+//     SDL_Surface *optimized = NULL;
+//
+//     if (surface == NULL) {
+//         printf("Unalbe to load image %s! SDL Error: %s\n", file, SDL_GetError());
+//
+//         return NULL;
+//     }
+//
+//     optimized = SDL_ConvertSurface(surface, app->surface->format, 0);
+//
+//     if (optimized == NULL) {
+//         printf("Unable to optimize image %s! SDL ERror: %s\n", file, SDL_GetError());
+//
+//         SDL_FreeSurface(surface);
+//
+//         return NULL;
+//     }
+//
+//     return optimized;
+// }
+
 void destroy_app(App *app) {
-    // SDL_DestroyRenderer(app->renderer);
-
+    SDL_DestroyRenderer(app->renderer);
     SDL_DestroyWindow(app->window);
-
     SDL_Quit();
 
     free(app);
 }
+
+void draw_axes(App *app, int scale) {
+    SDL_RenderDrawLine(app->renderer, WINDOW_WIDTH / 2, 0, WINDOW_WIDTH / 2, WINDOW_HEIGHT);
+    SDL_RenderDrawLine(app->renderer, 0, WINDOW_HEIGHT / 2, WINDOW_WIDTH, WINDOW_HEIGHT / 2);
+
+    int step = 50 * scale;
+
+    for (int x = WINDOW_WIDTH / 2 % step; x < WINDOW_WIDTH; x += step) {
+        SDL_RenderDrawLine(app->renderer, x, WINDOW_HEIGHT / 2 - 5, x, WINDOW_HEIGHT / 2 + 5);
+    }
+
+    for (int x = WINDOW_WIDTH / 2 % step; x > 0; x -= step) {
+        SDL_RenderDrawLine(app->renderer, x, WINDOW_HEIGHT / 2 - 5, x, WINDOW_HEIGHT / 2 + 5);
+    }
+
+    for (int y = WINDOW_HEIGHT / 2 % step; y < WINDOW_HEIGHT; y += step) {
+        SDL_RenderDrawLine(app->renderer, WINDOW_WIDTH / 2 - 5, y, WINDOW_WIDTH / 2 + 5, y);
+    }
+
+    for (int y = WINDOW_HEIGHT / 2 % step; y > 0; y -= step) {
+        SDL_RenderDrawLine(app->renderer, WINDOW_WIDTH / 2 - 5, y, WINDOW_WIDTH / 2 + 5, y);
+    }
+}
+
+// void draw_axes2(App *app, TTF_Font *font, int scale) {
+//     SDL_RenderDrawLine(app->renderer, WINDOW_WIDTH / 2, 0, WINDOW_WIDTH / 2, WINDOW_HEIGHT);
+//     SDL_RenderDrawLine(app->renderer, 0, WINDOW_HEIGHT / 2, WINDOW_WIDTH, WINDOW_HEIGHT / 2);
+//
+//     int step = 50 * scale;
+//
+//     SDL_Color fg;
+//
+//     fg.r = 0xFF;
+//     fg.g = 0xFF;
+//     fg.b = 0xFF;
+//     fg.a = 0xFF;
+//
+//     for (int x = WINDOW_WIDTH / 2, i = 0; x < WINDOW_WIDTH; x += step, i++) {
+//         SDL_RenderDrawLine(app->renderer, x, WINDOW_HEIGHT / 2 - 5, x, WINDOW_HEIGHT / 2 + 5);
+//         char label[10];
+//         sprintf(label, "%d", i * step);
+//         SDL_Surface *textSurface = TTF_RenderText_Solid(font, label, fg);
+//         SDL_Texture *text = SDL_CreateTextureFromSurface(app->renderer, textSurface);
+//         int textW, textH;
+//         SDL_QueryTexture(text, NULL, NULL, &textW, &textH);
+//         SDL_Rect renderQuad = {x - (textW / 2), WINDOW_HEIGHT / 2 + 10, textW, textH};
+//         SDL_RenderCopy(app->renderer, text, NULL, &renderQuad);
+//         SDL_FreeSurface(textSurface);
+//         SDL_DestroyTexture(text);
+//     }
+//
+//     for (int x = WINDOW_WIDTH / 2, i = 0; x > 0; x -= step, i--) {
+//         SDL_RenderDrawLine(app->renderer, x, WINDOW_HEIGHT / 2 - 5, x, WINDOW_HEIGHT / 2 + 5);
+//         char label[10];
+//         sprintf(label, "%d", i * step);
+//         SDL_Surface *textSurface = TTF_RenderText_Solid(font, label, fg);
+//         SDL_Texture *text = SDL_CreateTextureFromSurface(app->renderer, textSurface);
+//         int textW, textH;
+//         SDL_QueryTexture(text, NULL, NULL, &textW, &textH);
+//         SDL_Rect renderQuad = {x - (textW / 2), WINDOW_HEIGHT / 2 + 10, textW, textH};
+//         SDL_RenderCopy(app->renderer, text, NULL, &renderQuad);
+//         SDL_FreeSurface(textSurface);
+//         SDL_DestroyTexture(text);
+//     }
+//
+//     for (int y = WINDOW_HEIGHT / 2, j = 0; y < WINDOW_HEIGHT; y += step, j++) {
+//         SDL_RenderDrawLine(app->renderer, WINDOW_WIDTH / 2 - 5, y, WINDOW_WIDTH / 2 + 5, y);
+//         char label[10];
+//         sprintf(label, "%d", j * step);
+//         SDL_Surface *textSurface = TTF_RenderText_Solid(font, label, fg);
+//         SDL_Texture *text = SDL_CreateTextureFromSurface(app->renderer, textSurface);
+//         int textW, textH;
+//         SDL_QueryTexture(text, NULL, NULL, &textW, &textH);
+//         SDL_Rect renderQuad = {WINDOW_WIDTH / 2 + 10, y - (textH / 2), textW, textH};
+//         SDL_RenderCopy(app->renderer, text, NULL, &renderQuad);
+//         SDL_FreeSurface(textSurface);
+//         SDL_DestroyTexture(text);
+//     }
+//
+//     for (int y = WINDOW_HEIGHT / 2, j = 0; y > 0; y -= step, j--) {
+//         SDL_RenderDrawLine(app->renderer, WINDOW_WIDTH / 2 - 5, y, WINDOW_WIDTH / 2 + 5, y);
+//         char label[10];
+//         sprintf(label, "%d", j * step);
+//         SDL_Surface *textSurface = TTF_RenderText_Solid(font, label, fg);
+//         SDL_Texture *text = SDL_CreateTextureFromSurface(app->renderer, textSurface);
+//         int textW, textH;
+//         SDL_QueryTexture(text, NULL, NULL, &textW, &textH);
+//         SDL_Rect renderQuad = {WINDOW_WIDTH / 2 + 10, y - (textH / 2), textW, textH};
+//         SDL_RenderCopy(app->renderer, text, NULL, &renderQuad);
+//         SDL_FreeSurface(textSurface);
+//         SDL_DestroyTexture(text);
+//     }
+// }
 
 int main() {
     App *app = init_app();
@@ -112,9 +224,11 @@ int main() {
         return -1;
     }
 
-    SDL_Surface *image = load_and_optimize_image(app, "loaded.png");
+    SDL_Texture *texture = load_texture(app, "texture.png");
 
-    if (image == NULL) {
+    if (texture == NULL) {
+        destroy_app(app);
+
         return -1;
     }
 
@@ -122,27 +236,88 @@ int main() {
 
     int quit = 0;
 
+    long long int i = 0;
+    long long int j = 0;
+
+    int mode = 0;
+
+    TTF_Font *font = TTF_OpenFont("/Users/aloysobek/Downloads/Roboto/Roboto-Regular.ttf",
+                                  12); // Users/aloysobek/Downloads/Roboto/Roboto-Regular.ttf
+    if (!font) {
+        printf("TTF Font load error: %s\n", TTF_GetError());
+        return 1;
+    }
+
+    int scale = 1;
+
     while (!quit) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 quit = 1;
             }
+            if (e.type == SDL_MOUSEWHEEL) {
+                if (e.wheel.y > 0) // scroll up
+                {
+                    ++scale;
+                } else if (e.wheel.y < 0) // scroll down
+                {
+                    --scale;
+
+                    if (scale < 1) {
+                        scale = 1;
+                    }
+                }
+            }
         }
 
-        SDL_Rect rect;
+        // SDL_Rect viewport;
 
-        rect.x = 0;
-        rect.y = 0;
+        // viewport.x = j;
+        // viewport.y = 0;
 
-        rect.w = SCREEN_WIDTH;
-        rect.h = SCREEN_HEIGHT;
+        // viewport.w = WINDOW_WIDTH / 2;
+        // viewport.h = WINDOW_HEIGHT / 2;
 
-        SDL_BlitScaled(image, NULL, app->surface, &rect);
+        // SDL_SetRenderDrawColor(app->renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+        // SDL_RenderClear(app->renderer);
 
-        SDL_UpdateWindowSurface(app->window);
+        // SDL_Rect rect = {WINDOW_WIDTH / 4, WINDOW_HEIGHT / 4, WINDOW_WIDTH / 2, WINDOW_HEIGHT /
+        // 2}; SDL_SetRenderDrawColor(app->renderer, 0xFF, 0x00, 0x00, 0xFF);
+        // SDL_RenderFillRect(app->renderer, &rect);
+
+        // SDL_Rect rect2 = {WINDOW_WIDTH / 6, WINDOW_HEIGHT / 6, WINDOW_WIDTH * 2 / 3,
+        //                   WINDOW_HEIGHT * 2 / 3};
+        // SDL_SetRenderDrawColor(app->renderer, 0x00, 0xFF, 0x00, 0xFF);
+        // SDL_RenderFillRect(app->renderer, &rect2);
+
+        // SDL_SetRenderDrawColor(app->renderer, 0x00, 0x00, 0xFF, 0xFF);
+        // SDL_RenderDrawLine(app->renderer, 0, WINDOW_HEIGHT / 2, WINDOW_WIDTH, WINDOW_HEIGHT / 2);
+
+        // // Draw vertical line of yellow dots
+        // SDL_SetRenderDrawColor(app->renderer, 0xFF, 0xFF, 0x00, 0xFF);
+        // for (int i = 0; i < WINDOW_HEIGHT; i += 4) {
+        //     SDL_RenderDrawPoint(app->renderer, WINDOW_WIDTH / 2, i);
+        // }
+
+        // SDL_RenderSetViewport(app->renderer, &viewport);
+
+        // SDL_RenderCopy(app->renderer, texture, NULL, NULL);
+
+        // SDL_RenderPresent(app->renderer);
+
+        SDL_SetRenderDrawColor(app->renderer, 0x00, 0x00, 0x00, 0xFF);
+        SDL_RenderClear(app->renderer);
+
+        SDL_SetRenderDrawColor(app->renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+        draw_axes(app, scale);
+
+        SDL_RenderPresent(app->renderer);
     }
 
-    SDL_FreeSurface(image);
+    SDL_DestroyTexture(texture);
+
+    TTF_CloseFont(font);
+    TTF_Quit();
 
     destroy_app(app);
 
