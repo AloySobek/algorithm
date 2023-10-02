@@ -124,26 +124,31 @@ void destroy_app(App *app) {
     free(app);
 }
 
-void draw_axes(App *app, int scale) {
+void draw_axes(App *app, int padding, int segment_separator_length) {
+    // Abscissa
     SDL_RenderDrawLine(app->renderer, WINDOW_WIDTH / 2, 0, WINDOW_WIDTH / 2, WINDOW_HEIGHT);
+
+    for (int x = WINDOW_WIDTH / 2 - padding; x >= 0; x -= padding) {
+        SDL_RenderDrawLine(app->renderer, x, WINDOW_HEIGHT / 2 - segment_separator_length, x,
+                           WINDOW_HEIGHT / 2 + segment_separator_length);
+    }
+
+    for (int x = WINDOW_WIDTH / 2 + padding; x <= WINDOW_WIDTH; x += padding) {
+        SDL_RenderDrawLine(app->renderer, x, WINDOW_HEIGHT / 2 - segment_separator_length, x,
+                           WINDOW_HEIGHT / 2 + segment_separator_length);
+    }
+
+    // Ordinate
     SDL_RenderDrawLine(app->renderer, 0, WINDOW_HEIGHT / 2, WINDOW_WIDTH, WINDOW_HEIGHT / 2);
 
-    int step = 50 * scale;
-
-    for (int x = WINDOW_WIDTH / 2 % step; x < WINDOW_WIDTH; x += step) {
-        SDL_RenderDrawLine(app->renderer, x, WINDOW_HEIGHT / 2 - 5, x, WINDOW_HEIGHT / 2 + 5);
+    for (int y = WINDOW_HEIGHT / 2 - padding; y >= 0; y -= padding) {
+        SDL_RenderDrawLine(app->renderer, WINDOW_WIDTH / 2 - segment_separator_length, y,
+                           WINDOW_WIDTH / 2 + segment_separator_length, y);
     }
 
-    for (int x = WINDOW_WIDTH / 2 % step; x > 0; x -= step) {
-        SDL_RenderDrawLine(app->renderer, x, WINDOW_HEIGHT / 2 - 5, x, WINDOW_HEIGHT / 2 + 5);
-    }
-
-    for (int y = WINDOW_HEIGHT / 2 % step; y < WINDOW_HEIGHT; y += step) {
-        SDL_RenderDrawLine(app->renderer, WINDOW_WIDTH / 2 - 5, y, WINDOW_WIDTH / 2 + 5, y);
-    }
-
-    for (int y = WINDOW_HEIGHT / 2 % step; y > 0; y -= step) {
-        SDL_RenderDrawLine(app->renderer, WINDOW_WIDTH / 2 - 5, y, WINDOW_WIDTH / 2 + 5, y);
+    for (int y = WINDOW_HEIGHT / 2 + padding; y <= WINDOW_HEIGHT; y += padding) {
+        SDL_RenderDrawLine(app->renderer, WINDOW_WIDTH / 2 - segment_separator_length, y,
+                           WINDOW_WIDTH / 2 + segment_separator_length, y);
     }
 }
 
@@ -309,7 +314,7 @@ int main() {
         SDL_RenderClear(app->renderer);
 
         SDL_SetRenderDrawColor(app->renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-        draw_axes(app, scale);
+        draw_axes(app, scale, 10);
 
         SDL_RenderPresent(app->renderer);
     }
