@@ -32,34 +32,12 @@ template <typename T> class SinglyLinkedList {
 
     // O(n)
     std::optional<T> find(std::function<bool(T)> predicate) {
-        Node *iter = head;
+        Node *node = _find(predicate);
 
-        while (iter) {
-            if (predicate(iter->data)) {
-                return iter->data;
-            }
-
-            iter = iter->next;
-        }
+        if (node)
+            return node->data;
 
         return {std::nullopt};
-    }
-
-    // O(n)
-    bool insert(std::function<bool(T)> predicate, T v) {
-        Node *iter = head;
-
-        while (iter) {
-            if (predicate(iter->data)) {
-                iter->next = Node{iter->next, v};
-
-                return true;
-            }
-
-            iter = iter->next;
-        }
-
-        return false;
     }
 
     ~SinglyLinkedList() {}
@@ -73,4 +51,19 @@ template <typename T> class SinglyLinkedList {
 
     Node *head;
     Node *tail;
+
+    // O(n)
+    Node *_find(std::function<bool(T)> predicate) {
+        Node *iter = head;
+
+        while (iter) {
+            if (predicate(iter->data)) {
+                return iter;
+            }
+
+            iter = iter->next;
+        }
+
+        return nullptr;
+    }
 };
