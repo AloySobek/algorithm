@@ -14,4 +14,8 @@ TEST_CASE("testing the factorial function") {
     CHECK(list.find([](int x) -> bool { return x == 1; }).has_value());
     CHECK(list.find([](int x) -> bool { return x == 2; }).has_value());
     CHECK(list.find([](int x) -> bool { return x == 3; }).has_value());
+
+    CHECK(list.at(0).has_value() && list.at(0).value() == 1);
+    CHECK(list.at(1).has_value() && list.at(0).value() == 2);
+    CHECK(list.at(2).has_value() && list.at(0).value() == 3);
 }
