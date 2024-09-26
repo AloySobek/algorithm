@@ -35,6 +35,22 @@ template <typename T> class Stack {
         return {};
     }
 
+    // 1 2 3 4 5
+    // 5 4   2 1
+    void inverse() {
+        if (data == nullptr) {
+            return;
+        }
+
+        for (int i = 0; i < length / 2; ++i) {
+            T tmp = *(data + i);
+
+            *(data + i) = *(data + (length - i - 1));
+
+            *(data + (length - i - 1)) = tmp;
+        }
+    }
+
     ~Stack() {}
 
   private:
