@@ -17,6 +17,14 @@ template <typename T> class Stack {
         length += 1;
     }
 
+    std::optional<T> peek() {
+        if (data != nullptr && length > 0) {
+            return *(data + length);
+        }
+
+        return {};
+    }
+
     std::optional<T> pop() {
         if (data != nullptr && length > 0) {
             length -= 1;
