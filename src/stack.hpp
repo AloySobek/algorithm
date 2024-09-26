@@ -19,7 +19,7 @@ template <typename T> class Stack {
 
     std::optional<T> peek() {
         if (data != nullptr && length > 0) {
-            return *(data + length);
+            return *(data + length - 1);
         }
 
         return {};
